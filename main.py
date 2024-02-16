@@ -24,87 +24,99 @@ def SortColumn(col, reverse):
     # в следующий раз выполняем сортировку в обратном порядке
     tree.heading(col, command=lambda: SortColumn(col, not reverse))
 
-
-#Проверка на корректность ввода даты
-def CheckData(s):
-    if len(s) != 3:
-        print('Неверный формат даты')
-        return False
-    if len(s[2]) == 0:
-        print('Пустой год')
-        return False
-    for c in s[2]:
-        if not c.isdigit():
-            print('Дата должна содержать только числа')
-            return False
-        if int(s[2]) == 0:
-            print('Неверно задан год')
-            return False
-    if len(s[1]) == 0:
-        print('Пустой месяц')
-        return False
-    for c in s[1]:
-        if not c.isdigit():
-            print('Дата должна содержать только числа')
-            return False
-        if int(s[1]) == 0 or int(s[1]) > 12:
-            print('Неверно задан месяц')
-            return False
-    if len(s[0]) == 0:
-        print('Пустой день')
-        return False
-    for c in s[0]:
-        if not c.isdigit():
-            print('Дата должна содержать только числа')
-            return False
-        y = int(s[2])
-        m = int(s[1])
-        d = int(s[0])
-        v = False
-        if y % 400 == 0:
-            v = True
-        elif y % 4 == 0 and y % 100 != 0:
-            v = True
-        if d == 0 or d > 31 or (d > 30 and (m == 4 or m == 6 or m == 9 or m == 11)) or (d > 29 and m == 2) or (d > 28 and m == 2 and not v):
-            print('Неверно задан день')
-            return False
-    return True
-
-#Проверка на корректность ввода IP
-def CheckIP(s):
-    if len(s) != 2:
-        print('Неверный формат данных')
-        return False
-    else:
-        if len(s[1]) == 0 or len(s[1]) > 5:
-            print('Неправильная длина порта')
-            return False
-        for c in s[1]:
-            if not c.isdigit():
-                print('Неверно задан порт')
-                return False
-        if int(s[1]) > 65535:
-            print('Порт не может превышать 65535')
-            return False
-        s = s[0].split('.')
-        if len(s) != 4:
-            print('Неверно задан IP')
-            return False
-        for ss in s:
-            if len(ss) == 0 or len(ss) > 4:
-                print('Неправильная длина адреса')
-                return False
-            for c in ss:
-                if not c.isdigit():
-                    print('Поле IP должно быть задано цифрами')
-                    return False
-            if int(ss) > 256:
-                print('Адрес не может превышать 255')
-                return False
-    return True
+#Заполнение таблицы значениями
+def FillTable(dict_interface):
+    for key in dict_interface.keys():
+        l = list()
+        l.append(key)
+        l.append(dict_interface[key]["weightIP/COM"])
+        l.append(dict_interface[key]["model"])
+        l.append(dict_interface[key]["printerIP"])
+        l.append(dict_interface[key]["data"])
+        l.append(dict_interface[key]["time"])
+        tree.insert("", END, values=l)
 
 #Проверка на корректность данных в полях
 def CheckInsertDataRow(l):
+    # Проверка на корректность ввода даты
+    def CheckData(s):
+        if len(s) != 3:
+            print('Неверный формат даты')
+            return False
+        if len(s[2]) == 0:
+            print('Пустой год')
+            return False
+        for c in s[2]:
+            if not c.isdigit():
+                print('Дата должна содержать только числа')
+                return False
+            if int(s[2]) == 0:
+                print('Неверно задан год')
+                return False
+        if len(s[1]) == 0:
+            print('Пустой месяц')
+            return False
+        for c in s[1]:
+            if not c.isdigit():
+                print('Дата должна содержать только числа')
+                return False
+            if int(s[1]) == 0 or int(s[1]) > 12:
+                print('Неверно задан месяц')
+                return False
+        if len(s[0]) == 0:
+            print('Пустой день')
+            return False
+        for c in s[0]:
+            if not c.isdigit():
+                print('Дата должна содержать только числа')
+                return False
+            y = int(s[2])
+            m = int(s[1])
+            d = int(s[0])
+            v = False
+            if y % 400 == 0:
+                v = True
+            elif y % 4 == 0 and y % 100 != 0:
+                v = True
+            if d == 0 or d > 31 or (d > 30 and (m == 4 or m == 6 or m == 9 or m == 11)) or (d > 29 and m == 2) or (
+                    d > 28 and m == 2 and not v):
+                print('Неверно задан день')
+                return False
+        return True
+
+    # Проверка на корректность ввода IP
+    def CheckIP(s):
+        if len(s) != 2:
+            print('Неверный формат данных')
+            return False
+        else:
+            if len(s[1]) == 0 or len(s[1]) > 5:
+                print('Неправильная длина порта')
+                return False
+            for c in s[1]:
+                if not c.isdigit():
+                    print('Неверно задан порт')
+                    return False
+            if int(s[1]) > 65535:
+                print('Порт не может превышать 65535')
+                return False
+            s = s[0].split('.')
+            if len(s) != 4:
+                print('Неверно задан IP')
+                return False
+            for ss in s:
+                if len(ss) == 0 or len(ss) > 4:
+                    print('Неправильная длина адреса')
+                    return False
+                for c in ss:
+                    if not c.isdigit():
+                        print('Поле IP должно быть задано цифрами')
+                        return False
+                if int(ss) > 256:
+                    print('Адрес не может превышать 255')
+                    return False
+        return True
+
     #number
     if len(l[0]) == 0:
         print('Поле не может быть пустым')
@@ -218,23 +230,43 @@ def AddRowToTable():
         }
     return
 
-#Заполнение таблицы значениями
-def FillTable(dict_interface):
-    for key in dict_interface.keys():
-        l = list()
-        l.append(key)
-        l.append(dict_interface[key]["weightIP/COM"])
-        l.append(dict_interface[key]["model"])
-        l.append(dict_interface[key]["printerIP"])
-        l.append(dict_interface[key]["data"])
-        l.append(dict_interface[key]["time"])
-        tree.insert("", END, values=l)
+#Изменение интерфейса
+def ChangeRowFromData():
+    number = number_entry.get()
+    COM = COMw_entry.get()
+    model = models_drop.get()
+    IPp = IPp_entry.get()
+    data = data_entry.get()
+    time = time_entry.get()
+    row_val = [number, COM, model, IPp, data, time]
+    if CheckInsertDataRow(row_val):
+        #Проверка на соответствие номера весов с заполненным полем номера весов
+        if tree.item(last_select_row)['values'][0] != int(number):
+            showerror('Ошибка','Неверно выбран номер весов для замены')
+            return
+        for k in tree.get_children(''):
+            if k != last_select_row and tree.item(k)['values'][1] == COM:
+                showerror('Ошибка', 'Интерфейс с таким COMпортом уже существует!\nCOMпорт - УНИКАЛЕН')
+                return
+        # Проверка на соединение с сервером и успешное изменение данных
+        print(f'API? Изменена строка: {row_val}')
+        tree.item(last_select_row, values=row_val)
+        server_interface[number] = {
+            'weightIP/COM': COM,
+            'model': model,
+            'printerIP': IPp,
+            'data': data,
+            'time': time
+        }
+    return
 
 #Заполнение полей из таблицы по нажатию строки
 def FillDataFromRow(event):
     try:
         rowid = tree.identify_row(event.y)
         if rowid != '':
+            global last_select_row
+            last_select_row = rowid
             number_entry.delete(0, END)
             number_entry.insert(0, tree.item(rowid)['values'][0])
             COMw_entry.delete(0, END)
@@ -248,6 +280,7 @@ def FillDataFromRow(event):
             time_entry.insert(0, tree.item(rowid)['values'][5])
     except Exception as e:
         print(f'Ошибка при нажатии в пустое метсо таблицы или заголовок {e}')
+
 
 '''
 app = Flask(__name__)
@@ -264,6 +297,7 @@ if __name__ == '__main__':
     app.run(debug=True)'''
 
 
+last_select_row = ''
 
 main_window = Tk()
 main_window.title("Управление интерфейсами")
@@ -483,7 +517,7 @@ button_frame2 = Frame(change_interface_frame)
 button_frame2.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
 button_Add = Button(button_frame2, text='Добавить интерфейс', command=AddRowToTable)
 button_Add.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-button_Change = Button(button_frame2, text='Изменить интерфейс')
+button_Change = Button(button_frame2, text='Изменить интерфейс', command=ChangeRowFromData)
 button_Change.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
 button_Delete = Button(button_frame2, text='Удалить интерфейс', command=DeleteRow)
 button_Delete.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
