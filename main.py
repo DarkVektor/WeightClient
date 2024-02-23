@@ -3,8 +3,26 @@ from tkinter import ttk
 from tkinter.messagebox import showerror
 import requests
 import socket
-import flask
-from flask import Flask, jsonify, request
+import json
+
+#region Прочие кнопки
+#Обновление таблицы интерфейсов
+def UpdateInterface():
+    global server_interface
+    server_interface = FillTableInterface()
+
+def ReloadInterfaces():
+    try:
+        resp = requests.put(f"http://{host}:{port}/ReloadInterfaces")
+        if resp.text == 'Reloaded':
+            UpdateInterface()
+        else:
+            print('Перезапустить интерфейсы не получилось')
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
+    except Exception as e:
+        print(e)
+#endregion
 
 def SortColumn(col, reverse):
     # получаем все значения столбцов в виде отдельного списка
@@ -25,7 +43,20 @@ def SortColumn(col, reverse):
     tree.heading(col, command=lambda: SortColumn(col, not reverse))
 
 #Заполнение таблицы значениями
-def FillTable(dict_interface):
+def FillTableInterface():
+    tree.delete(*tree.get_children())
+    try:
+        resp = requests.get(f"http://{host}:{port}/Interfaces")
+        text = resp.text.split(';')
+        dict_interface = eval(text[0])
+        dict_numbers = eval(text[1])
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
+        return dict()
+    except Exception as e:
+        print(e)
+        return dict()
+
     for key in dict_interface.keys():
         l = list()
         l.append(key)
@@ -34,7 +65,12 @@ def FillTable(dict_interface):
         l.append(dict_interface[key]["printerIP"])
         l.append(dict_interface[key]["data"])
         l.append(dict_interface[key]["time"])
-        tree.insert("", END, values=l)
+        if key in dict_numbers:
+            tag = ('use',)
+        else:
+            tag = ('usent',)
+        tree.insert("", END, values=l, tags=tag)
+    return dict_interface
 
 #Проверка на корректность данных в полях
 def CheckInsertDataRow(l):
@@ -281,21 +317,10 @@ def FillDataFromRow(event):
     except Exception as e:
         print(f'Ошибка при нажатии в пустое метсо таблицы или заголовок {e}')
 
-
-'''
-app = Flask(__name__)
-
-@app.route('/api/v1/tasks', methods=['GET'])
-def get_tasks():
-    tasks = [
-        {"id": 1, "title": "Task 1"},
-        {"id": 2, "title": "Task 2"}
-    ]
-    return jsonify({"tasks": tasks})
-
-if __name__ == '__main__':
-    app.run(debug=True)'''
-
+with open("config.json", 'r') as file:
+    _config_params = json.load(file)
+host = _config_params['server']['host']
+port = _config_params['server']['port']
 
 last_select_row = ''
 
@@ -327,116 +352,22 @@ tree.column("#3", stretch=YES, width=175, anchor=CENTER)
 tree.column("#4", stretch=YES, width=100, anchor=CENTER)
 tree.column("#5", stretch=YES, width=100, anchor=CENTER)
 tree.column("#6", stretch=YES, width=100, anchor=CENTER)
+tree.tag_configure('use', background='#e5fff6')
+tree.tag_configure('usent', background='#ffe5e5')
 # добавляем вертикальную прокрутку
 scrollbar = ttk.Scrollbar(in_interface_frame, orient=VERTICAL, command=tree.yview)
 tree.configure(yscroll=scrollbar.set)
 scrollbar.grid(row=0, column=1, sticky="ns")
 #Нажатие на строку таблицы
 tree.bind('<Button 1>', FillDataFromRow)
-'''resp = requests.get("http://localhost:8020/api/v1/checkParticipant")
-print(resp.headers)
-print()
-'''
-server_interface = dict({
-    "13": {
-        "weightIP/COM": "COM1",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "12": {
-        "weightIP/COM": "COM2",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "11": {
-        "weightIP/COM": "COM3",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.84:9100",
-        "data": "",
-        "time": ""
-    },
-    "10": {
-        "weightIP/COM": "COM4",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "9": {
-        "weightIP/COM": "COM1",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "8": {
-        "weightIP/COM": "COM2",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "7": {
-        "weightIP/COM": "COM3",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.84:9100",
-        "data": "",
-        "time": ""
-    },
-    "6": {
-        "weightIP/COM": "COM4",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "1": {
-        "weightIP/COM": "COM1",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "2": {
-        "weightIP/COM": "COM2",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "3": {
-        "weightIP/COM": "COM3",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.84:9100",
-        "data": "",
-        "time": ""
-    },
-    "4": {
-        "weightIP/COM": "COM4",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    },
-    "5": {
-        "weightIP/COM": "COM5",
-        "model": "CAS HD 60",
-        "printerIP": "192.168.0.83:9100",
-        "data": "",
-        "time": ""
-    }
-})
-FillTable(server_interface)
+
+server_interface = FillTableInterface()
 
 button_frame = LabelFrame(main_window, text='Управление')
 button_frame.grid(row=0, column=1, sticky="nsew", padx=2)
-btn_load = Button(button_frame, text="Загрузить конфигурацию")
-btn_load.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-btn_save = Button(button_frame, text="Сохранить конфигурацию")
+btn_update = Button(button_frame, text="Обновить", command=UpdateInterface)
+btn_update.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+btn_save = Button(button_frame, text="Перезапустить интерфейсы", command=ReloadInterfaces)
 btn_save.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
 btn_reload = Button(button_frame, text="Перезапустить интерфейсы")
 btn_reload.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
@@ -523,3 +454,12 @@ button_Delete = Button(button_frame2, text='Удалить интерфейс', 
 button_Delete.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
 
 main_window.mainloop()
+
+'''try:
+    resp = requests.get(f"http://{host}:{port}/models")
+    print(resp.status_code)
+    print(resp.text)
+    resp = requests.get(f"http://{host}:{port}/interfaces")
+    print(resp.text)
+except Exception as e:
+    print(e)'''
