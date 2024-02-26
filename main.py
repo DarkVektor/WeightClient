@@ -227,12 +227,33 @@ def CheckInsertDataRow(l):
 
 #Удаление интерфейса
 def DeleteRow():
+    text = dict()
     for selected_item in tree.selection():
-        #Проверка на соединение и удаление
-        print(f'API? Интерфейс удален')
-        del server_interface[str(tree.item(selected_item)['values'][0])]
-        tree.delete(selected_item)
-    return
+        text[str(tree.item(selected_item)['values'][0])] = True
+    text = str(text)
+    try:
+        resp = requests.delete(f"http://{host}:{port}/Interfaces", data=text)
+        if resp.status_code == 400:
+            print('Странная ошибка при удалении на сервере')
+        else:
+            ans = eval(resp.text)
+            err_text = list()
+            #Проверка на соединение и удаление
+            for selected_item in tree.selection():
+                key = str(tree.item(selected_item)['values'][0])
+                if key not in ans:
+                    del server_interface[key]
+                    tree.delete(selected_item)
+                else:
+                    err_text.append(key)
+            if len(err_text) == 0:
+                print('Успешное удаление интерфейсов')
+            else:
+                print(f'Весы: {err_text} не были удалены')
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
+    except Exception as e:
+        print(e)
 
 #Добавление интерфейса
 def AddRowToTable():
@@ -255,16 +276,36 @@ def AddRowToTable():
                 showerror('Ошибка', 'Интерфейс с таким COMпортом уже существует!\nCOMпорт - УНИКАЛЕН')
                 return
         #Проверка на соединение с сервером и успешное изменение данных
-        print(f'API? Добавлена строка: {row_val}')
-        tree.insert('', END, values=row_val)
-        server_interface[number] = {
+        i = {
             'weightIP/COM': COM,
             'model': model,
             'printerIP': IPp,
             'data': data,
             'time': time
         }
-    return
+        text = {number : i}
+        text = str(text)
+        try:
+            resp = requests.post(f"http://{host}:{port}/AddInterface", data=text)
+            if resp.text == 'Error':
+                print('Создать/Загрузить интерфейс не получилось')
+                return
+            elif resp.text == 'Added':
+                tag = ('use',)
+            else:
+                tag = ('usent',)
+            tree.insert('', END, values=row_val, tags=tag)
+            server_interface[number] = {
+                'weightIP/COM': COM,
+                'model': model,
+                'printerIP': IPp,
+                'data': data,
+                'time': time
+            }
+        except requests.ConnectionError as e:
+            print(f'Ошибка соединения к {host}:{port}')
+        except Exception as e:
+            print(e)
 
 #Изменение интерфейса
 def ChangeRowFromData():
