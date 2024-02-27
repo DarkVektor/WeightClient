@@ -24,6 +24,7 @@ def ReloadInterfaces():
         print(e)
 #endregion
 
+#Сортировка столбцов таблицы интерфейсов
 def SortColumn(col, reverse):
     # получаем все значения столбцов в виде отдельного списка
     #(Числа)
@@ -45,6 +46,8 @@ def SortColumn(col, reverse):
 #Заполнение таблицы значениями
 def FillTableInterface():
     tree.delete(*tree.get_children())
+    global last_select_row
+    last_select_row = ''
     try:
         resp = requests.get(f"http://{host}:{port}/Interfaces")
         text = resp.text.split(';')
@@ -257,6 +260,8 @@ def DeleteRow():
 
 #Добавление интерфейса
 def AddRowToTable():
+    global server_interface
+    server_interface = FillTableInterface()
     number = number_entry.get()
     COM = COMw_entry.get()
     model = models_drop.get()
@@ -295,13 +300,7 @@ def AddRowToTable():
             else:
                 tag = ('usent',)
             tree.insert('', END, values=row_val, tags=tag)
-            server_interface[number] = {
-                'weightIP/COM': COM,
-                'model': model,
-                'printerIP': IPp,
-                'data': data,
-                'time': time
-            }
+            server_interface[number] = i
         except requests.ConnectionError as e:
             print(f'Ошибка соединения к {host}:{port}')
         except Exception as e:
@@ -309,6 +308,8 @@ def AddRowToTable():
 
 #Изменение интерфейса
 def ChangeRowFromData():
+    if last_select_row == '':
+        return
     number = number_entry.get()
     COM = COMw_entry.get()
     model = models_drop.get()
@@ -325,17 +326,32 @@ def ChangeRowFromData():
             if k != last_select_row and tree.item(k)['values'][1] == COM:
                 showerror('Ошибка', 'Интерфейс с таким COMпортом уже существует!\nCOMпорт - УНИКАЛЕН')
                 return
+
         # Проверка на соединение с сервером и успешное изменение данных
-        print(f'API? Изменена строка: {row_val}')
-        tree.item(last_select_row, values=row_val)
-        server_interface[number] = {
+        i = {
             'weightIP/COM': COM,
             'model': model,
             'printerIP': IPp,
             'data': data,
             'time': time
         }
-    return
+        text = {number: i}
+        text = str(text)
+        try:
+            resp = requests.put(f"http://{host}:{port}/ChangeInterface", data=text)
+            if resp.text == 'Error':
+                print('Изменить/Загрузить интерфейс не получилось')
+                return
+            elif resp.text == 'Added':
+                tag = ('use',)
+            else:
+                tag = ('usent',)
+            tree.item(last_select_row, values=row_val, tags=tag)
+            server_interface[number] = i
+        except requests.ConnectionError as e:
+            print(f'Ошибка соединения к {host}:{port}')
+        except Exception as e:
+            print(e)
 
 #Заполнение полей из таблицы по нажатию строки
 def FillDataFromRow(event):
@@ -495,6 +511,7 @@ button_Delete = Button(button_frame2, text='Удалить интерфейс', 
 button_Delete.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
 
 main_window.mainloop()
+
 
 '''try:
     resp = requests.get(f"http://{host}:{port}/models")
