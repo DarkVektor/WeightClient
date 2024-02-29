@@ -10,6 +10,8 @@ import json
 def UpdateInterface():
     global server_interface
     server_interface = FillTableInterface()
+    global server_models
+    server_models = FillTableModels()
 
 def ReloadInterfaces():
     try:
@@ -42,6 +44,9 @@ def SortColumn(col, reverse):
         tree.move(k, "", index)
     # в следующий раз выполняем сортировку в обратном порядке
     tree.heading(col, command=lambda: SortColumn(col, not reverse))
+
+def FillTableModels():
+    pass
 
 #Заполнение таблицы значениями
 def FillTableInterface():
@@ -353,6 +358,9 @@ def ChangeRowFromData():
         except Exception as e:
             print(e)
 
+def FillDataFromRowModel(event):
+    pass
+
 #Заполнение полей из таблицы по нажатию строки
 def FillDataFromRow(event):
     try:
@@ -374,150 +382,221 @@ def FillDataFromRow(event):
     except Exception as e:
         print(f'Ошибка при нажатии в пустое метсо таблицы или заголовок {e}')
 
-with open("config.json", 'r') as file:
-    _config_params = json.load(file)
-host = _config_params['server']['host']
-port = _config_params['server']['port']
+if __name__ == '__main__':
+    with open("config.json", 'r') as file:
+        _config_params = json.load(file)
+    host = _config_params['server']['host']
+    port = _config_params['server']['port']
 
-last_select_row = ''
+    last_select_row = ''
 
-main_window = Tk()
-main_window.title("Управление интерфейсами")
-main_window.geometry("815x500+550+200")
-main_window.wm_minsize(815,500)
-main_window.rowconfigure(index=0, weight=1)
-main_window.columnconfigure(index=0, weight=1)
+    main_window = Tk()
+    main_window.title("Управление интерфейсами")
+    main_window.geometry("815x525+550+200")
+    main_window.wm_minsize(815,525)
+    main_window.rowconfigure(index=0, weight=1)
+    main_window.columnconfigure(index=0, weight=1)
 
-interface_frame = LabelFrame(main_window, text='Список интерфейсов')
-interface_frame.grid(row=0, column=0, sticky="nsew", padx=2)
-in_interface_frame = Frame(interface_frame)
-in_interface_frame.grid(row=0, column=0, sticky="nsew")
-# определяем столбцы
-columns = ("Number", "weightCOM_IP", "model", "PrinterIP", "Data", "Time")
-tree = ttk.Treeview(in_interface_frame, columns=columns, show="headings")
-tree.grid(row=0, column=0, sticky="nsew", padx=1, pady=2)
-# определяем заголовки
-tree.heading("Number", text="№", anchor=CENTER, command=lambda: SortColumn(0, False))
-tree.heading("weightCOM_IP", text="COM/IP Весов", anchor=CENTER, command=lambda: SortColumn(1, False))
-tree.heading("model", text="Модель", anchor=CENTER, command=lambda: SortColumn(2, False))
-tree.heading("PrinterIP", text="IP Принтера", anchor=CENTER, command=lambda: SortColumn(3, False))
-tree.heading("Data", text="Дата", anchor=CENTER, command=lambda: SortColumn(4, False))
-tree.heading("Time", text="Время", anchor=CENTER, command=lambda: SortColumn(5, False))
-tree.column("#1", stretch=YES, width=25, anchor=CENTER)
-tree.column("#2", stretch=YES, width=100, anchor=CENTER)
-tree.column("#3", stretch=YES, width=175, anchor=CENTER)
-tree.column("#4", stretch=YES, width=100, anchor=CENTER)
-tree.column("#5", stretch=YES, width=100, anchor=CENTER)
-tree.column("#6", stretch=YES, width=100, anchor=CENTER)
-tree.tag_configure('use', background='#e5fff6')
-tree.tag_configure('usent', background='#ffe5e5')
-# добавляем вертикальную прокрутку
-scrollbar = ttk.Scrollbar(in_interface_frame, orient=VERTICAL, command=tree.yview)
-tree.configure(yscroll=scrollbar.set)
-scrollbar.grid(row=0, column=1, sticky="ns")
-#Нажатие на строку таблицы
-tree.bind('<Button 1>', FillDataFromRow)
+    tab_control = ttk.Notebook(main_window)
+    tabInterface = ttk.Frame(tab_control)
+    tabModel = ttk.Frame(tab_control)
+    tab_control.add(tabInterface, text='Интерфейсы')
+    tab_control.add(tabModel, text='Модели')
+    tab_control.pack(expand=1, fill='both')
+    #Вкладка Интерефейсов
+    tabInterface.rowconfigure(index=0, weight=1)
+    tabInterface.columnconfigure(index=0, weight=1)
 
-server_interface = FillTableInterface()
+    interface_frame = LabelFrame(tabInterface, text='Список интерфейсов')
+    interface_frame.grid(row=0, column=0, sticky="nsew", padx=2)
+    in_interface_frame = Frame(interface_frame)
+    in_interface_frame.grid(row=0, column=0, sticky="nsew")
+    # определяем столбцы
+    columns = ("Number", "weightCOM_IP", "model", "PrinterIP", "Data", "Time")
+    tree = ttk.Treeview(in_interface_frame, columns=columns, show="headings")
+    tree.grid(row=0, column=0, sticky="nsew", padx=1, pady=2)
+    # определяем заголовки
+    tree.heading("Number", text="№", anchor=CENTER, command=lambda: SortColumn(0, False))
+    tree.heading("weightCOM_IP", text="COM/IP Весов", anchor=CENTER, command=lambda: SortColumn(1, False))
+    tree.heading("model", text="Модель", anchor=CENTER, command=lambda: SortColumn(2, False))
+    tree.heading("PrinterIP", text="IP Принтера", anchor=CENTER, command=lambda: SortColumn(3, False))
+    tree.heading("Data", text="Дата", anchor=CENTER, command=lambda: SortColumn(4, False))
+    tree.heading("Time", text="Время", anchor=CENTER, command=lambda: SortColumn(5, False))
+    tree.column("#1", stretch=YES, width=25, anchor=CENTER)
+    tree.column("#2", stretch=YES, width=100, anchor=CENTER)
+    tree.column("#3", stretch=YES, width=175, anchor=CENTER)
+    tree.column("#4", stretch=YES, width=100, anchor=CENTER)
+    tree.column("#5", stretch=YES, width=100, anchor=CENTER)
+    tree.column("#6", stretch=YES, width=100, anchor=CENTER)
+    tree.tag_configure('use', background='#e5fff6')
+    tree.tag_configure('usent', background='#ffe5e5')
+    # добавляем вертикальную прокрутку
+    scrollbar = ttk.Scrollbar(in_interface_frame, orient=VERTICAL, command=tree.yview)
+    tree.configure(yscroll=scrollbar.set)
+    scrollbar.grid(row=0, column=1, sticky="ns")
+    #Нажатие на строку таблицы
+    tree.bind('<Button 1>', FillDataFromRow)
 
-button_frame = LabelFrame(main_window, text='Управление')
-button_frame.grid(row=0, column=1, sticky="nsew", padx=2)
-btn_update = Button(button_frame, text="Обновить", command=UpdateInterface)
-btn_update.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-btn_save = Button(button_frame, text="Перезапустить интерфейсы", command=ReloadInterfaces)
-btn_save.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
-btn_reload = Button(button_frame, text="Перезапустить интерфейсы")
-btn_reload.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
-btn_models = Button(button_frame, text="Модели")
-btn_models.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
-#Поле собственного IP
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(("8.8.8.8", 80))
-label = Label(main_window, text=f'Текущий IP: {s.getsockname()[0]}')
-s.close()
-label.grid(row=1, column=1, sticky="nsew", padx=5)
+    server_interface = FillTableInterface()
 
-change_interface_frame = LabelFrame(interface_frame, text='Добавление/Изменение/Удаление интерфейсов')
-change_interface_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
-enter_interface_frame = Frame(change_interface_frame)
-enter_interface_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
-number_Label = Label(enter_interface_frame, text='Номер весов:', anchor='w' ,font=("Arial bold", 10))
-number_Label.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-number_entry = Entry(enter_interface_frame, justify=CENTER, width=44)
-number_entry.grid(row=0, column=1, sticky="nsew", padx=5, pady=2)
-COMw_Label = Label(enter_interface_frame, text='COM/IP весов:', anchor='w' ,font=("Arial", 10))
-COMw_Label.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
-COMw_entry = Entry(enter_interface_frame, justify=CENTER)
-COMw_entry.grid(row=1, column=1, sticky="nsew", padx=5, pady=2)
-model_Label = Label(enter_interface_frame, text='Модель:', anchor='w' ,font=("Arial", 10))
-model_Label.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
-server_models = dict({
-    "CAS HD 60": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    },
-    "CKE-60-4050": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    },
-    "CAS DB-150 H": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    },
-    "CAS XE-6000": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    },
-    "CAS CBL-220 H": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    },
-    "ABCD": {
-        "baudrate": 9600,
-        "bytesize": 8,
-        "timeout": 2
-    }
-})
-models = list()
-for key in server_models.keys():
-    models.append(key)
-models_drop = ttk.Combobox(enter_interface_frame ,values=models, justify=CENTER)
-models_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
-IPp_Label = Label(enter_interface_frame, text='IP принтера:', anchor='w' ,font=("Arial", 10))
-IPp_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
-IPp_entry = Entry(enter_interface_frame, justify=CENTER)
-IPp_entry.grid(row=3, column=1, sticky="nsew", padx=5, pady=2)
-data_Label = Label(enter_interface_frame, text='Дата(dd.mm.yyyy):', anchor='w' ,font=("Arial", 10))
-data_Label.grid(row=4, column=0, sticky="nsew", padx=5, pady=2)
-data_entry = Entry(enter_interface_frame, justify=CENTER)
-data_entry.grid(row=4, column=1, sticky="nsew", padx=5, pady=2)
-time_Label = Label(enter_interface_frame, text='Время(HH:MM):', anchor='w' ,font=("Arial", 10))
-time_Label.grid(row=5, column=0, sticky="nsew", padx=5, pady=2)
-time_entry = Entry(enter_interface_frame, justify=CENTER)
-time_entry.grid(row=5, column=1, sticky="nsew", padx=5, pady=2)
+    button_frame = LabelFrame(tabInterface, text='Управление')
+    button_frame.grid(row=0, column=1, sticky="nsew", padx=2)
+    btn_update = Button(button_frame, text="Обновить", command=UpdateInterface)
+    btn_update.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    btn_reload = Button(button_frame, text="Перезапустить интерфейсы", command=ReloadInterfaces)
+    btn_reload.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+    btn_models = Button(button_frame, text="Модели")
+    btn_models.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
+    #Поле собственного IP
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    label = Label(tabInterface, text=f'Текущий IP: {s.getsockname()[0]}')
+    s.close()
+    label.grid(row=1, column=1, sticky="nsew", padx=5)
 
-button_frame2 = Frame(change_interface_frame)
-button_frame2.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
-button_Add = Button(button_frame2, text='Добавить интерфейс', command=AddRowToTable)
-button_Add.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-button_Change = Button(button_frame2, text='Изменить интерфейс', command=ChangeRowFromData)
-button_Change.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
-button_Delete = Button(button_frame2, text='Удалить интерфейс', command=DeleteRow)
-button_Delete.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
+    change_interface_frame = LabelFrame(interface_frame, text='Добавление/Изменение/Удаление интерфейсов')
+    change_interface_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+    enter_interface_frame = Frame(change_interface_frame)
+    enter_interface_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+    number_Label = Label(enter_interface_frame, text='Номер весов:', anchor='w' ,font=("Arial bold", 10))
+    number_Label.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    number_entry = Entry(enter_interface_frame, justify=CENTER, width=44)
+    number_entry.grid(row=0, column=1, sticky="nsew", padx=5, pady=2)
+    COMw_Label = Label(enter_interface_frame, text='COM/IP весов:', anchor='w' ,font=("Arial", 10))
+    COMw_Label.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+    COMw_entry = Entry(enter_interface_frame, justify=CENTER)
+    COMw_entry.grid(row=1, column=1, sticky="nsew", padx=5, pady=2)
+    model_Label = Label(enter_interface_frame, text='Модель:', anchor='w' ,font=("Arial", 10))
+    model_Label.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
+    server_models = dict({
+        "CAS HD 60": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        },
+        "CKE-60-4050": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        },
+        "CAS DB-150 H": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        },
+        "CAS XE-6000": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        },
+        "CAS CBL-220 H": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        },
+        "ABCD": {
+            "baudrate": 9600,
+            "bytesize": 8,
+            "timeout": 2
+        }
+    })
+    models = list()
+    for key in server_models.keys():
+        models.append(key)
+    models_drop = ttk.Combobox(enter_interface_frame ,values=models, justify=CENTER)
+    models_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
+    IPp_Label = Label(enter_interface_frame, text='IP принтера:', anchor='w' ,font=("Arial", 10))
+    IPp_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
+    IPp_entry = Entry(enter_interface_frame, justify=CENTER)
+    IPp_entry.grid(row=3, column=1, sticky="nsew", padx=5, pady=2)
+    data_Label = Label(enter_interface_frame, text='Дата(dd.mm.yyyy):', anchor='w' ,font=("Arial", 10))
+    data_Label.grid(row=4, column=0, sticky="nsew", padx=5, pady=2)
+    data_entry = Entry(enter_interface_frame, justify=CENTER)
+    data_entry.grid(row=4, column=1, sticky="nsew", padx=5, pady=2)
+    time_Label = Label(enter_interface_frame, text='Время(HH:MM):', anchor='w' ,font=("Arial", 10))
+    time_Label.grid(row=5, column=0, sticky="nsew", padx=5, pady=2)
+    time_entry = Entry(enter_interface_frame, justify=CENTER)
+    time_entry.grid(row=5, column=1, sticky="nsew", padx=5, pady=2)
 
-main_window.mainloop()
+    button_frame2 = Frame(change_interface_frame)
+    button_frame2.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+    button_Add = Button(button_frame2, text='Добавить интерфейс', command=AddRowToTable)
+    button_Add.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    button_Change = Button(button_frame2, text='Изменить интерфейс', command=ChangeRowFromData)
+    button_Change.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
+    button_Delete = Button(button_frame2, text='Удалить интерфейс', command=DeleteRow)
+    button_Delete.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
 
+    #Вкладка Моделей
+    tabModel.rowconfigure(index=0, weight=1)
+    tabModel.columnconfigure(index=0, weight=1)
 
-'''try:
-    resp = requests.get(f"http://{host}:{port}/models")
-    print(resp.status_code)
-    print(resp.text)
-    resp = requests.get(f"http://{host}:{port}/interfaces")
-    print(resp.text)
-except Exception as e:
-    print(e)'''
+    model_frame = LabelFrame(tabModel, text='Список моделей')
+    model_frame.grid(row=0, column=0, sticky="nsew", padx=2)
+    in_model_frame = Frame(model_frame)
+    in_model_frame.grid(row=0, column=0, sticky="nsew")
+    #Определяем столбцы
+    columns_m = ("Model", "baudrate", "bytesize", "timeout")
+    tree_m = ttk.Treeview(in_model_frame, columns=columns_m, show="headings")
+    tree_m.grid(row=0, column=0, sticky="nsew", padx=1, pady=2)
+    #Определяем заголовки
+    tree_m.heading("Model", text="Модель", anchor=CENTER, command=lambda: SortColumn(0, False))
+    tree_m.heading("baudrate", text="baudrate", anchor=CENTER, command=lambda: SortColumn(1, False))
+    tree_m.heading("bytesize", text="bytesize", anchor=CENTER, command=lambda: SortColumn(2, False))
+    tree_m.heading("timeout", text="timeout", anchor=CENTER, command=lambda: SortColumn(3, False))
+    tree_m.column("#1", stretch=YES, width=150, anchor=CENTER)
+    tree_m.column("#2", stretch=YES, width=150, anchor=CENTER)
+    tree_m.column("#3", stretch=YES, width=150, anchor=CENTER)
+    tree_m.column("#4", stretch=YES, width=150, anchor=CENTER)
+    #tree_m.tag_configure('use', background='#e5fff6')
+    #tree_m.tag_configure('usent', background='#ffe5e5')
+    #Добавляем вертикальную прокрутку
+    scrollbar_m = ttk.Scrollbar(in_model_frame, orient=VERTICAL, command=tree_m.yview)
+    tree_m.configure(yscroll=scrollbar_m.set)
+    scrollbar_m.grid(row=0, column=1, sticky="ns")
+    #Нажатие на строку таблицы
+    tree_m.bind('<Button 1>', FillDataFromRowModel)
+
+    button_frame_m = LabelFrame(tabModel, text='Управление')
+    button_frame_m.grid(row=0, column=1, sticky="nsew", padx=2)
+    btn_m_update = Button(button_frame_m, text="Обновить", command=UpdateInterface, width=22)
+    btn_m_update.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    #Поле собственного IP
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    label_m = Label(tabModel, text=f'Текущий IP: {s.getsockname()[0]}')
+    s.close()
+    label_m.grid(row=1, column=1, sticky="nsew", padx=5)
+
+    change_model_frame = LabelFrame(model_frame, text='Добавление/Изменение/Удаление моделей')
+    change_model_frame.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+    enter_model_frame = Frame(change_model_frame)
+    enter_model_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+    name_Label = Label(enter_model_frame, text='Название модели:', anchor='w', font=("Arial bold", 10))
+    name_Label.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    name_entry = Entry(enter_model_frame, justify=CENTER, width=44)
+    name_entry.grid(row=0, column=1, sticky="nsew", padx=5, pady=2)
+    baudrate_Label = Label(enter_model_frame, text='baudrate:', anchor='w', font=("Arial", 10))
+    baudrate_Label.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+    baudrates = [110, 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 56000, 57600, 115200, 128000, 256000]
+    baudrate_drop = ttk.Combobox(enter_model_frame, values=baudrates, justify=CENTER)
+    baudrate_drop.grid(row=1, column=1, sticky="nsew", padx=5, pady=2)
+    bytesize_Label = Label(enter_model_frame, text='bytesize:', anchor='w', font=("Arial", 10))
+    bytesize_Label.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
+    bytesizes = [4, 5, 6, 7, 8]
+    bytesize_drop = ttk.Combobox(enter_model_frame, values=bytesizes, justify=CENTER)
+    bytesize_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
+    timeout_Label = Label(enter_model_frame, text='timeout:', anchor='w', font=("Arial", 10))
+    timeout_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
+    timeout_entry = Entry(enter_model_frame, justify=CENTER)
+    timeout_entry.grid(row=3, column=1, sticky="nsew", padx=5, pady=2)
+
+    button_frame2_m = Frame(change_model_frame)
+    button_frame2_m.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
+    button_Add_m = Button(button_frame2_m, text='Добавить модель')
+    button_Add_m.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
+    button_Change_m = Button(button_frame2_m, text='Изменить модель')
+    button_Change_m.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
+    button_Delete_m = Button(button_frame2_m, text='Удалить модель')
+    button_Delete_m.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
+    main_window.mainloop()
