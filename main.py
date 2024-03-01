@@ -26,6 +26,23 @@ def ReloadInterfaces():
         print(e)
 #endregion
 
+#region Обработка таблиц
+#Сортировка столбцов таблицы моделей
+def SortColumnModel(col, reverse):
+    # получаем все значения столбцов в виде отдельного списка
+    #(Числа)
+    if col == 1 or col == 2:
+        l = [(int(tree_m.set(k, col)), k) for k in tree_m.get_children("")]
+    else:
+        l = [(tree_m.set(k, col), k) for k in tree_m.get_children("")]
+    # сортируем список
+    l.sort(reverse=reverse)
+    # переупорядочиваем значения в отсортированном порядке
+    for index, (_, k) in enumerate(l):
+        tree_m.move(k, "", index)
+    # в следующий раз выполняем сортировку в обратном порядке
+    tree_m.heading(col, command=lambda: SortColumnModel(col, not reverse))
+
 #Сортировка столбцов таблицы интерфейсов
 def SortColumn(col, reverse):
     # получаем все значения столбцов в виде отдельного списка
@@ -45,10 +62,33 @@ def SortColumn(col, reverse):
     # в следующий раз выполняем сортировку в обратном порядке
     tree.heading(col, command=lambda: SortColumn(col, not reverse))
 
+#Заполнение таблицы моделей значениями
 def FillTableModels():
-    pass
+    tree_m.delete(*tree_m.get_children())
+    global last_select_row_m
+    last_select_row_m = ''
+    try:
+        resp = requests.get(f"http://{host}:{port}/Models")
+        dict_models = eval(resp.text)
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
+        return dict()
+    except Exception as e:
+        print(e)
+        return dict()
+    m = list()
+    for key in dict_models.keys():
+        l = list()
+        m.append(key)
+        l.append(key)
+        l.append(dict_models[key]["baudrate"])
+        l.append(dict_models[key]["bytesize"])
+        l.append(dict_models[key]["timeout"])
+        tree_m.insert("", END, values=l)
+    models_drop['values'] = m
+    return dict_models
 
-#Заполнение таблицы значениями
+#Заполнение таблицы интерфейсов значениями
 def FillTableInterface():
     tree.delete(*tree.get_children())
     global last_select_row
@@ -80,7 +120,46 @@ def FillTableInterface():
         tree.insert("", END, values=l, tags=tag)
     return dict_interface
 
-#Проверка на корректность данных в полях
+#Заполнение полей из таблицы моделей по нажатию строки
+def FillDataFromRowModel(event):
+    try:
+        rowid = tree_m.identify_row(event.y)
+        if rowid != '':
+            global last_select_row_m
+            last_select_row_m = rowid
+            name_entry.delete(0, END)
+            name_entry.insert(0, tree_m.item(rowid)['values'][0])
+            baudrate_drop.set(tree_m.item(rowid)['values'][1])
+            bytesize_drop.set(tree_m.item(rowid)['values'][2])
+            timeout_entry.delete(0, END)
+            timeout_entry.insert(0, tree_m.item(rowid)['values'][3])
+    except Exception as e:
+        print(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}')
+
+#Заполнение полей из таблицы интерфейсов по нажатию строки
+def FillDataFromRow(event):
+    try:
+        rowid = tree.identify_row(event.y)
+        if rowid != '':
+            global last_select_row
+            last_select_row = rowid
+            number_entry.delete(0, END)
+            number_entry.insert(0, tree.item(rowid)['values'][0])
+            COMw_entry.delete(0, END)
+            COMw_entry.insert(0, tree.item(rowid)['values'][1])
+            models_drop.set(tree.item(rowid)['values'][2])
+            IPp_entry.delete(0, END)
+            IPp_entry.insert(0, tree.item(rowid)['values'][3])
+            data_entry.delete(0, END)
+            data_entry.insert(0, tree.item(rowid)['values'][4])
+            time_entry.delete(0, END)
+            time_entry.insert(0, tree.item(rowid)['values'][5])
+    except Exception as e:
+        print(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}')
+#endregion
+
+#region Интерфейсы
+#Проверка на корректность вводимых данных в полях
 def CheckInsertDataRow(l):
     # Проверка на корректность ввода даты
     def CheckData(s):
@@ -233,36 +312,6 @@ def CheckInsertDataRow(l):
                 return False
     return True
 
-#Удаление интерфейса
-def DeleteRow():
-    text = dict()
-    for selected_item in tree.selection():
-        text[str(tree.item(selected_item)['values'][0])] = True
-    text = str(text)
-    try:
-        resp = requests.delete(f"http://{host}:{port}/Interfaces", data=text)
-        if resp.status_code == 400:
-            print('Странная ошибка при удалении на сервере')
-        else:
-            ans = eval(resp.text)
-            err_text = list()
-            #Проверка на соединение и удаление
-            for selected_item in tree.selection():
-                key = str(tree.item(selected_item)['values'][0])
-                if key not in ans:
-                    del server_interface[key]
-                    tree.delete(selected_item)
-                else:
-                    err_text.append(key)
-            if len(err_text) == 0:
-                print('Успешное удаление интерфейсов')
-            else:
-                print(f'Весы: {err_text} не были удалены')
-    except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
-    except Exception as e:
-        print(e)
-
 #Добавление интерфейса
 def AddRowToTable():
     global server_interface
@@ -358,29 +407,180 @@ def ChangeRowFromData():
         except Exception as e:
             print(e)
 
-def FillDataFromRowModel(event):
-    pass
-
-#Заполнение полей из таблицы по нажатию строки
-def FillDataFromRow(event):
+#Удаление интерфейса
+def DeleteRow():
+    text = dict()
+    if len(tree.selection()) == 0:
+        return
+    for selected_item in tree.selection():
+        text[str(tree.item(selected_item)['values'][0])] = True
+    text = str(text)
     try:
-        rowid = tree.identify_row(event.y)
-        if rowid != '':
-            global last_select_row
-            last_select_row = rowid
-            number_entry.delete(0, END)
-            number_entry.insert(0, tree.item(rowid)['values'][0])
-            COMw_entry.delete(0, END)
-            COMw_entry.insert(0, tree.item(rowid)['values'][1])
-            models_drop.set(tree.item(rowid)['values'][2])
-            IPp_entry.delete(0, END)
-            IPp_entry.insert(0, tree.item(rowid)['values'][3])
-            data_entry.delete(0, END)
-            data_entry.insert(0, tree.item(rowid)['values'][4])
-            time_entry.delete(0, END)
-            time_entry.insert(0, tree.item(rowid)['values'][5])
+        resp = requests.delete(f"http://{host}:{port}/Interfaces", data=text)
+        if resp.status_code == 400:
+            print('Странная ошибка при удалении на сервере')
+        else:
+            ans = eval(resp.text)
+            err_text = list()
+            #Проверка на соединение и удаление
+            for selected_item in tree.selection():
+                key = str(tree.item(selected_item)['values'][0])
+                if key not in ans:
+                    del server_interface[key]
+                    tree.delete(selected_item)
+                else:
+                    err_text.append(key)
+            if len(err_text) == 0:
+                print('Успешное удаление интерфейсов')
+            else:
+                print(f'Весы: {err_text} не были удалены')
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
     except Exception as e:
-        print(f'Ошибка при нажатии в пустое метсо таблицы или заголовок {e}')
+        print(e)
+#endregion
+
+#region Модели
+#Проверка на корректность вводимых данных в полях
+def CheckInsertDataRowModel(l):
+    if len(l[0]) == 0:
+        print('Поле не должно быть пустым')
+        return False
+    if len(l[1]) == 0:
+        print('Поле не должно быть пустым')
+        return False
+    else:
+        try:
+            if not int(l[1]) in baudrates:
+                print('Поле не может принимать других значений, кроме заданных')
+                return False
+        except Exception as e:
+            print(e)
+            return False
+    if len(l[2]) == 0:
+        print('Поле не должно быть пустым')
+        return False
+    else:
+        try:
+            if not int(l[2]) in bytesizes:
+                print('Поле не может принимать других значений, кроме заданных')
+                return False
+        except Exception as e:
+            print(e)
+            return False
+    if len(l[3]) == 0:
+        print('Поле не должно быть пустым')
+        return False
+    else:
+        for c in l[3]:
+            if not c.isdigit():
+                print('Поле должно быть задано числом')
+                return False
+    return True
+
+#Добавление модели
+def AddRowToTableModel():
+    global server_models
+    server_models = FillTableModels()
+    name = name_entry.get()
+    baudrate = baudrate_drop.get()
+    bytesize = bytesize_drop.get()
+    timeout = timeout_entry.get()
+    row_val = [name, baudrate, bytesize, timeout]
+    #Проверка на кореектность вводимых данных
+    if CheckInsertDataRowModel(row_val):
+        #Проверка на уже существование такой модели
+        if server_models.get(name, None):
+            showerror('Ошибка', 'Модель с таким названием уже существует!\nНазвание модели - УНИКАЛЬНО')
+            return
+        # Проверка на соединение с сервером и успешное изменение данных
+        m = {
+            'baudrate': baudrate,
+            'bytesize': bytesize,
+            'timeout': timeout
+        }
+        text = {name: m}
+        text = str(text)
+        try:
+            resp = requests.post(f"http://{host}:{port}/AddModel", data=text)
+            if resp.text == 'Error' or resp.text == 'Not Added':
+                print('Создать/Загрузить модель не получилось')
+                return
+            tree_m.insert('', END, values=row_val)
+            server_models[name] = m
+            l = list(models_drop['values'])
+            l.append(name)
+            models_drop['values'] = l
+        except requests.ConnectionError as e:
+            print(f'Ошибка соединения к {host}:{port}')
+        except Exception as e:
+            print(e)
+
+#Изменение модели
+def ChangeRowFromDataModel():
+    if last_select_row_m == '':
+        return
+    name = name_entry.get()
+    baudrate = baudrate_drop.get()
+    bytesize = bytesize_drop.get()
+    timeout = timeout_entry.get()
+    row_val = [name, baudrate, bytesize, timeout]
+    if CheckInsertDataRowModel(row_val):
+        #Проверка на соответствие номера весов с заполненным полем номера весов
+        if tree_m.item(last_select_row_m)['values'][0] != name:
+            showerror('Ошибка','Неверно выбрано название модели для замены')
+            return
+        # Проверка на соединение с сервером и успешное изменение данных
+        m = {
+            'baudrate': baudrate,
+            'bytesize': bytesize,
+            'timeout': timeout
+        }
+        text = {name: m}
+        text = str(text)
+        try:
+            resp = requests.put(f"http://{host}:{port}/ChangeModel", data=text)
+            if resp.text == 'Error':
+                print('Неопознанная ошибка. Изменить/Загрузить модель не получилось')
+                return
+            elif resp.text == 'Not Added':
+                print('СОМпорт не запущен')
+            else:
+                print('Успешное изменение конфигурации модели')
+            tree_m.item(last_select_row_m, values=row_val)
+            server_models[name] = m
+            global server_interface
+            server_interface = FillTableInterface()
+        except requests.ConnectionError as e:
+            print(f'Ошибка соединения к {host}:{port}')
+        except Exception as e:
+            print(e)
+
+#Удаление модели
+def DeleteRowModel():
+    text = dict()
+    if len(tree_m.selection()) == 0:
+        return
+    for selected_item in tree_m.selection():
+        text[str(tree_m.item(selected_item)['values'][0])] = True
+    text = str(text)
+    try:
+        resp = requests.delete(f"http://{host}:{port}/Models", data=text)
+        if resp.status_code == 400:
+            print('Странная ошибка при удалении на сервере')
+        else:
+            ans = eval(resp.text)
+            err_text = list()
+            print('Успешное удаление модели')
+            if len(err_text) != 0:
+                print(f'Весы: {err_text} используют удаленный тип модели')
+
+    except requests.ConnectionError as e:
+        print(f'Ошибка соединения к {host}:{port}')
+    except Exception as e:
+        print(e)
+
+#endregion
 
 if __name__ == '__main__':
     with open("config.json", 'r') as file:
@@ -389,6 +589,7 @@ if __name__ == '__main__':
     port = _config_params['server']['port']
 
     last_select_row = ''
+    last_select_row_m = ''
 
     main_window = Tk()
     main_window.title("Управление интерфейсами")
@@ -468,43 +669,7 @@ if __name__ == '__main__':
     COMw_entry.grid(row=1, column=1, sticky="nsew", padx=5, pady=2)
     model_Label = Label(enter_interface_frame, text='Модель:', anchor='w' ,font=("Arial", 10))
     model_Label.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
-    server_models = dict({
-        "CAS HD 60": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        },
-        "CKE-60-4050": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        },
-        "CAS DB-150 H": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        },
-        "CAS XE-6000": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        },
-        "CAS CBL-220 H": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        },
-        "ABCD": {
-            "baudrate": 9600,
-            "bytesize": 8,
-            "timeout": 2
-        }
-    })
-    models = list()
-    for key in server_models.keys():
-        models.append(key)
-    models_drop = ttk.Combobox(enter_interface_frame ,values=models, justify=CENTER)
-    models_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
+
     IPp_Label = Label(enter_interface_frame, text='IP принтера:', anchor='w' ,font=("Arial", 10))
     IPp_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
     IPp_entry = Entry(enter_interface_frame, justify=CENTER)
@@ -540,10 +705,10 @@ if __name__ == '__main__':
     tree_m = ttk.Treeview(in_model_frame, columns=columns_m, show="headings")
     tree_m.grid(row=0, column=0, sticky="nsew", padx=1, pady=2)
     #Определяем заголовки
-    tree_m.heading("Model", text="Модель", anchor=CENTER, command=lambda: SortColumn(0, False))
-    tree_m.heading("baudrate", text="baudrate", anchor=CENTER, command=lambda: SortColumn(1, False))
-    tree_m.heading("bytesize", text="bytesize", anchor=CENTER, command=lambda: SortColumn(2, False))
-    tree_m.heading("timeout", text="timeout", anchor=CENTER, command=lambda: SortColumn(3, False))
+    tree_m.heading("Model", text="Модель", anchor=CENTER, command=lambda: SortColumnModel(0, False))
+    tree_m.heading("baudrate", text="baudrate", anchor=CENTER, command=lambda: SortColumnModel(1, False))
+    tree_m.heading("bytesize", text="bytesize", anchor=CENTER, command=lambda: SortColumnModel(2, False))
+    tree_m.heading("timeout", text="timeout", anchor=CENTER, command=lambda: SortColumnModel(3, False))
     tree_m.column("#1", stretch=YES, width=150, anchor=CENTER)
     tree_m.column("#2", stretch=YES, width=150, anchor=CENTER)
     tree_m.column("#3", stretch=YES, width=150, anchor=CENTER)
@@ -556,6 +721,10 @@ if __name__ == '__main__':
     scrollbar_m.grid(row=0, column=1, sticky="ns")
     #Нажатие на строку таблицы
     tree_m.bind('<Button 1>', FillDataFromRowModel)
+
+    models_drop = ttk.Combobox(enter_interface_frame, values=[], justify=CENTER, state="readonly")
+    models_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
+    server_models = FillTableModels()
 
     button_frame_m = LabelFrame(tabModel, text='Управление')
     button_frame_m.grid(row=0, column=1, sticky="nsew", padx=2)
@@ -579,12 +748,12 @@ if __name__ == '__main__':
     baudrate_Label = Label(enter_model_frame, text='baudrate:', anchor='w', font=("Arial", 10))
     baudrate_Label.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
     baudrates = [110, 300, 600, 1200, 2400, 4800, 9600, 14400, 19200, 38400, 56000, 57600, 115200, 128000, 256000]
-    baudrate_drop = ttk.Combobox(enter_model_frame, values=baudrates, justify=CENTER)
+    baudrate_drop = ttk.Combobox(enter_model_frame, values=baudrates, justify=CENTER, state="readonly")
     baudrate_drop.grid(row=1, column=1, sticky="nsew", padx=5, pady=2)
     bytesize_Label = Label(enter_model_frame, text='bytesize:', anchor='w', font=("Arial", 10))
     bytesize_Label.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
     bytesizes = [4, 5, 6, 7, 8]
-    bytesize_drop = ttk.Combobox(enter_model_frame, values=bytesizes, justify=CENTER)
+    bytesize_drop = ttk.Combobox(enter_model_frame, values=bytesizes, justify=CENTER, state="readonly")
     bytesize_drop.grid(row=2, column=1, sticky="nsew", padx=5, pady=2)
     timeout_Label = Label(enter_model_frame, text='timeout:', anchor='w', font=("Arial", 10))
     timeout_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
@@ -593,10 +762,10 @@ if __name__ == '__main__':
 
     button_frame2_m = Frame(change_model_frame)
     button_frame2_m.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
-    button_Add_m = Button(button_frame2_m, text='Добавить модель')
+    button_Add_m = Button(button_frame2_m, text='Добавить модель', width=16, command=AddRowToTableModel)
     button_Add_m.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
-    button_Change_m = Button(button_frame2_m, text='Изменить модель')
+    button_Change_m = Button(button_frame2_m, text='Изменить модель', width=17, command=ChangeRowFromDataModel)
     button_Change_m.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
-    button_Delete_m = Button(button_frame2_m, text='Удалить модель')
+    button_Delete_m = Button(button_frame2_m, text='Удалить модель', width=16, command=DeleteRowModel)
     button_Delete_m.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
     main_window.mainloop()
