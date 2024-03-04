@@ -5,6 +5,20 @@ import requests
 import socket
 import json
 
+#Вывод ошибок на экран (Статус)
+def SetStatus(text, type):
+    status_Label_m['text'] = 'Статус: ' + text
+    status_Label['text'] = 'Статус: ' + text
+    if type == 'Error':
+        status_Label_m['fg'] = '#ff0000'
+        status_Label['fg'] = '#ff0000'
+    else:
+        status_Label_m['fg'] = '#000000'
+        status_Label['fg'] = '#000000'
+        if text == '':
+            status_Label_m['text'] = f'Статус: Соединено с {host}:{port}'
+            status_Label['text'] = f'Статус: Соединено с {host}:{port}'
+
 #region Прочие кнопки
 #Обновление таблицы интерфейсов
 def UpdateInterface():
@@ -15,15 +29,15 @@ def UpdateInterface():
 
 def ReloadInterfaces():
     try:
-        resp = requests.put(f"http://{host}:{port}/ReloadInterfaces")
+        resp = requests.put(f"http://{host}:{port}/ReloadInterfaces", timeout=TIMEOUT)
         if resp.text == 'Reloaded':
             UpdateInterface()
         else:
-            print('Перезапустить интерфейсы не получилось')
+            SetStatus('Перезапустить интерфейсы не получилось', 'Error')
     except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
+        SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
     except Exception as e:
-        print(e)
+        SetStatus(str(e), 'Error')
 #endregion
 
 #region Обработка таблиц
@@ -67,16 +81,17 @@ def FillTableModels():
     tree_m.delete(*tree_m.get_children())
     global last_select_row_m
     last_select_row_m = ''
+    m = list()
+    models_drop['values'] = m
     try:
-        resp = requests.get(f"http://{host}:{port}/Models")
+        resp = requests.get(f"http://{host}:{port}/Models", timeout=TIMEOUT)
         dict_models = eval(resp.text)
     except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
+        SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
         return dict()
     except Exception as e:
-        print(e)
+        SetStatus(str(e), 'Error')
         return dict()
-    m = list()
     for key in dict_models.keys():
         l = list()
         m.append(key)
@@ -86,6 +101,7 @@ def FillTableModels():
         l.append(dict_models[key]["timeout"])
         tree_m.insert("", END, values=l)
     models_drop['values'] = m
+    SetStatus('','')
     return dict_models
 
 #Заполнение таблицы интерфейсов значениями
@@ -94,15 +110,15 @@ def FillTableInterface():
     global last_select_row
     last_select_row = ''
     try:
-        resp = requests.get(f"http://{host}:{port}/Interfaces")
+        resp = requests.get(f"http://{host}:{port}/Interfaces", timeout=TIMEOUT)
         text = resp.text.split(';')
         dict_interface = eval(text[0])
         dict_numbers = eval(text[1])
     except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
+        SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
         return dict()
     except Exception as e:
-        print(e)
+        SetStatus(str(e), 'Error')
         return dict()
 
     for key in dict_interface.keys():
@@ -118,6 +134,7 @@ def FillTableInterface():
         else:
             tag = ('usent',)
         tree.insert("", END, values=l, tags=tag)
+        SetStatus('','')
     return dict_interface
 
 #Заполнение полей из таблицы моделей по нажатию строки
@@ -134,7 +151,7 @@ def FillDataFromRowModel(event):
             timeout_entry.delete(0, END)
             timeout_entry.insert(0, tree_m.item(rowid)['values'][3])
     except Exception as e:
-        print(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}')
+        SetStatus(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}', 'Error')
 
 #Заполнение полей из таблицы интерфейсов по нажатию строки
 def FillDataFromRow(event):
@@ -155,7 +172,7 @@ def FillDataFromRow(event):
             time_entry.delete(0, END)
             time_entry.insert(0, tree.item(rowid)['values'][5])
     except Exception as e:
-        print(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}')
+        SetStatus(f'Ошибка при нажатии в пустое место таблицы или заголовок {e}', 'Error')
 #endregion
 
 #region Интерфейсы
@@ -164,34 +181,34 @@ def CheckInsertDataRow(l):
     # Проверка на корректность ввода даты
     def CheckData(s):
         if len(s) != 3:
-            print('Неверный формат даты')
+            #print('Неверный формат даты')
             return False
         if len(s[2]) == 0:
-            print('Пустой год')
+            #print('Пустой год')
             return False
         for c in s[2]:
             if not c.isdigit():
-                print('Дата должна содержать только числа')
+                #print('Дата должна содержать только числа')
                 return False
             if int(s[2]) == 0:
-                print('Неверно задан год')
+                #print('Неверно задан год')
                 return False
         if len(s[1]) == 0:
-            print('Пустой месяц')
+            #print('Пустой месяц')
             return False
         for c in s[1]:
             if not c.isdigit():
-                print('Дата должна содержать только числа')
+                #print('Дата должна содержать только числа')
                 return False
             if int(s[1]) == 0 or int(s[1]) > 12:
-                print('Неверно задан месяц')
+                #print('Неверно задан месяц')
                 return False
         if len(s[0]) == 0:
-            print('Пустой день')
+            #print('Пустой день')
             return False
         for c in s[0]:
             if not c.isdigit():
-                print('Дата должна содержать только числа')
+                #print('Дата должна содержать только числа')
                 return False
             y = int(s[2])
             m = int(s[1])
@@ -203,119 +220,147 @@ def CheckInsertDataRow(l):
                 v = True
             if d == 0 or d > 31 or (d > 30 and (m == 4 or m == 6 or m == 9 or m == 11)) or (d > 29 and m == 2) or (
                     d > 28 and m == 2 and not v):
-                print('Неверно задан день')
+                #print('Неверно задан день')
                 return False
         return True
 
     # Проверка на корректность ввода IP
     def CheckIP(s):
         if len(s) != 2:
-            print('Неверный формат данных')
+            #print('Неверный формат данных')
             return False
         else:
             if len(s[1]) == 0 or len(s[1]) > 5:
-                print('Неправильная длина порта')
+                #print('Неправильная длина порта')
                 return False
             for c in s[1]:
                 if not c.isdigit():
-                    print('Неверно задан порт')
+                    #print('Неверно задан порт')
                     return False
             if int(s[1]) > 65535:
-                print('Порт не может превышать 65535')
+                #print('Порт не может превышать 65535')
                 return False
             s = s[0].split('.')
             if len(s) != 4:
-                print('Неверно задан IP')
+                #print('Неверно задан IP')
                 return False
             for ss in s:
                 if len(ss) == 0 or len(ss) > 4:
-                    print('Неправильная длина адреса')
+                    #print('Неправильная длина адреса')
                     return False
                 for c in ss:
                     if not c.isdigit():
-                        print('Поле IP должно быть задано цифрами')
+                        #print('Поле IP должно быть задано цифрами')
                         return False
                 if int(ss) > 256:
-                    print('Адрес не может превышать 255')
+                    #print('Адрес не может превышать 255')
                     return False
         return True
 
+    q = True
     #number
+    number_entry['bg'] = '#ffffff'
     if len(l[0]) == 0:
-        print('Поле не может быть пустым')
-        return False
-    for c in l[0]:
-        if not c.isdigit():
-            print('Неверный формат')
-            return False
-    #COM
-    if len(l[1]) == 0:
-        print('Поле не может быть пустым')
-        return False
-    if l[1].find('COM', 0) == -1:
-        if not CheckIP(l[1].split(':')):
-            return False
-    elif l[1].find('COM', 0) != 0:
-        print('Неверный ввод COM-порта')
-        return False
+        #print('Поле не может быть пустым')
+        number_entry['bg'] = '#ffe5e5'
+        q = False
     else:
-        s = l[1][3:]
-        if len(s) == 0:
-            print('Нет номера порта')
-            return False
-        for c in s:
+        for c in l[0]:
             if not c.isdigit():
-                print('В названии должны быть только цифры')
-                return False
+                #print('Неверный формат')
+                number_entry['bg'] = '#ffe5e5'
+                q = False
+                break
+    #COM
+    COMw_entry['bg'] = '#ffffff'
+    if len(l[1]) == 0:
+        #print('Поле не может быть пустым')
+        COMw_entry['bg'] = '#ffe5e5'
+        q = False
+    else:
+        if l[1].find('COM', 0) == -1:
+            if not CheckIP(l[1].split(':')):
+                COMw_entry['bg'] = '#ffe5e5'
+                q = False
+        elif l[1].find('COM', 0) != 0:
+            #print('Неверный ввод COM-порта')
+            COMw_entry['bg'] = '#ffe5e5'
+            q = False
+        else:
+            s = l[1][3:]
+            if len(s) == 0:
+                #print('Нет номера порта')
+                COMw_entry['bg'] = '#ffe5e5'
+                q = False
+            else:
+                for c in s:
+                    if not c.isdigit():
+                        #print('В названии должны быть только цифры')
+                        COMw_entry['bg'] = '#ffe5e5'
+                        q = False
+                        break
     #model
     if len(l[2]) == 0:
-        print('Поле не может быть пустым')
-        return False
-    if not server_models.get(l[2], None):
-        print('Такой модели нет в конфигурации')
-        return False
+        q = False
+    else:
+        if not server_models.get(l[2], None):
+            q = False
     #IPp
+    IPp_entry['bg'] = '#ffffff'
     if len(l[3]) == 0:
-        print('Поле не может быть пустым')
-        return False
-    if not CheckIP(l[3].split(':')):
-        return False
+        #print('Поле не может быть пустым')
+        IPp_entry['bg'] = '#ffe5e5'
+        q = False
+    else:
+        if not CheckIP(l[3].split(':')):
+            IPp_entry['bg'] = '#ffe5e5'
+            q = False
     #data
+    data_entry['bg'] = '#ffffff'
     if len(l[4]) != 0:
         if not CheckData(l[4].split('.')):
-            return False
+            data_entry['bg'] = '#ffe5e5'
+            q = False
     #time
+    time_entry['bg'] = '#ffffff'
     if len(l[5]) != 0:
         s = l[5].split(':')
         if len(s) != 2:
-            print('Неверный формат времени')
+            #print('Неверный формат времени')
+            time_entry['bg'] = '#ffe5e5'
             return False
         if len(s[0]) == 0:
-            print('Неверно заданы часы')
+            #print('Неверно заданы часы')
+            time_entry['bg'] = '#ffe5e5'
             return False
-        for c in s[0]:
-            if not c.isdigit():
-                print('Дата должна содержать только числа')
-                return False
+        else:
+            for c in s[0]:
+                if not c.isdigit():
+                    #print('Дата должна содержать только числа')
+                    time_entry['bg'] = '#ffe5e5'
+                    return False
             if int(s[0]) > 23:
-                print('Неверно заданы часы')
+                #print('Неверно заданы часы')
+                time_entry['bg'] = '#ffe5e5'
                 return False
-        if len(s[1]) == 0:
-            print('Неверно заданы минуты')
-            return False
-        for c in s[1]:
-            if not c.isdigit():
-                print('Дата должна содержать только числа')
+            if len(s[1]) == 0:
+                #print('Неверно заданы минуты')
+                time_entry['bg'] = '#ffe5e5'
                 return False
-            if int(s[1]) > 59:
-                print('Неверно заданы минуты')
-                return False
-    return True
+            for c in s[1]:
+                if not c.isdigit():
+                    #print('Дата должна содержать только числа')
+                    time_entry['bg'] = '#ffe5e5'
+                    return False
+                if int(s[1]) > 59:
+                    #print('Неверно заданы минуты')
+                    time_entry['bg'] = '#ffe5e5'
+                    return False
+    return q
 
 #Добавление интерфейса
 def AddRowToTable():
-    global server_interface
-    server_interface = FillTableInterface()
+    UpdateInterface()
     number = number_entry.get()
     COM = COMw_entry.get()
     model = models_drop.get()
@@ -345,9 +390,9 @@ def AddRowToTable():
         text = {number : i}
         text = str(text)
         try:
-            resp = requests.post(f"http://{host}:{port}/AddInterface", data=text)
+            resp = requests.post(f"http://{host}:{port}/AddInterface", data=text, timeout=TIMEOUT)
             if resp.text == 'Error':
-                print('Создать/Загрузить интерфейс не получилось')
+                SetStatus('Создать/Загрузить интерфейс не получилось', 'Error')
                 return
             elif resp.text == 'Added':
                 tag = ('use',)
@@ -355,10 +400,11 @@ def AddRowToTable():
                 tag = ('usent',)
             tree.insert('', END, values=row_val, tags=tag)
             server_interface[number] = i
+            SetStatus('','')
         except requests.ConnectionError as e:
-            print(f'Ошибка соединения к {host}:{port}')
+            SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
         except Exception as e:
-            print(e)
+            SetStatus(str(e), 'Error')
 
 #Изменение интерфейса
 def ChangeRowFromData():
@@ -392,9 +438,9 @@ def ChangeRowFromData():
         text = {number: i}
         text = str(text)
         try:
-            resp = requests.put(f"http://{host}:{port}/ChangeInterface", data=text)
+            resp = requests.put(f"http://{host}:{port}/ChangeInterface", data=text, timeout=TIMEOUT)
             if resp.text == 'Error':
-                print('Изменить/Загрузить интерфейс не получилось')
+                SetStatus('Изменить/Загрузить интерфейс не получилось', 'Error')
                 return
             elif resp.text == 'Added':
                 tag = ('use',)
@@ -402,10 +448,11 @@ def ChangeRowFromData():
                 tag = ('usent',)
             tree.item(last_select_row, values=row_val, tags=tag)
             server_interface[number] = i
+            SetStatus('','')
         except requests.ConnectionError as e:
-            print(f'Ошибка соединения к {host}:{port}')
+            SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
         except Exception as e:
-            print(e)
+            SetStatus(str(e), 'Error')
 
 #Удаление интерфейса
 def DeleteRow():
@@ -416,9 +463,9 @@ def DeleteRow():
         text[str(tree.item(selected_item)['values'][0])] = True
     text = str(text)
     try:
-        resp = requests.delete(f"http://{host}:{port}/Interfaces", data=text)
+        resp = requests.delete(f"http://{host}:{port}/Interfaces", data=text, timeout=TIMEOUT)
         if resp.status_code == 400:
-            print('Странная ошибка при удалении на сервере')
+            SetStatus('Странная ошибка при удалении на сервере', 'Error')
         else:
             ans = eval(resp.text)
             err_text = list()
@@ -430,58 +477,66 @@ def DeleteRow():
                     tree.delete(selected_item)
                 else:
                     err_text.append(key)
-            if len(err_text) == 0:
-                print('Успешное удаление интерфейсов')
-            else:
-                print(f'Весы: {err_text} не были удалены')
+            SetStatus('','')
+            if len(err_text) != 0:
+                SetStatus(f'Весы: {err_text} не были удалены', 'Error')
     except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
+        SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
     except Exception as e:
-        print(e)
+        SetStatus(str(e), 'Error')
 #endregion
 
 #region Модели
 #Проверка на корректность вводимых данных в полях
 def CheckInsertDataRowModel(l):
+    q = True
+    #name
+    name_entry['bg'] = '#ffffff'
     if len(l[0]) == 0:
-        print('Поле не должно быть пустым')
-        return False
+        #print('Поле не должно быть пустым')
+        name_entry['bg'] = '#ffe5e5'
+        q = False
+    #baudrate
     if len(l[1]) == 0:
-        print('Поле не должно быть пустым')
-        return False
+        #print('Поле не должно быть пустым')
+        q = False
     else:
         try:
             if not int(l[1]) in baudrates:
-                print('Поле не может принимать других значений, кроме заданных')
-                return False
+                #print('Поле не может принимать других значений, кроме заданных')
+                q = False
         except Exception as e:
-            print(e)
-            return False
+            #print(e)
+            q = False
+    #bytesize
     if len(l[2]) == 0:
-        print('Поле не должно быть пустым')
-        return False
+        #print('Поле не должно быть пустым')
+        q = False
     else:
         try:
             if not int(l[2]) in bytesizes:
-                print('Поле не может принимать других значений, кроме заданных')
-                return False
+                #print('Поле не может принимать других значений, кроме заданных')
+                q = False
         except Exception as e:
-            print(e)
-            return False
+            #print(e)
+            q = False
+    #timeout
+    timeout_entry['bg'] = '#ffffff'
     if len(l[3]) == 0:
-        print('Поле не должно быть пустым')
+        #print('Поле не должно быть пустым')
+        timeout_entry['bg'] = '#ffe5e5'
         return False
     else:
         for c in l[3]:
             if not c.isdigit():
-                print('Поле должно быть задано числом')
+                #print('Поле должно быть задано числом')
+                timeout_entry['bg'] = '#ffe5e5'
                 return False
-    return True
+    return q
 
 #Добавление модели
 def AddRowToTableModel():
-    global server_models
-    server_models = FillTableModels()
+    UpdateInterface()
     name = name_entry.get()
     baudrate = baudrate_drop.get()
     bytesize = bytesize_drop.get()
@@ -502,19 +557,20 @@ def AddRowToTableModel():
         text = {name: m}
         text = str(text)
         try:
-            resp = requests.post(f"http://{host}:{port}/AddModel", data=text)
+            resp = requests.post(f"http://{host}:{port}/AddModel", data=text, timeout=TIMEOUT)
             if resp.text == 'Error' or resp.text == 'Not Added':
-                print('Создать/Загрузить модель не получилось')
+                SetStatus('Создать/Загрузить модель не получилось', 'Error')
                 return
             tree_m.insert('', END, values=row_val)
             server_models[name] = m
             l = list(models_drop['values'])
             l.append(name)
             models_drop['values'] = l
+            SetStatus('','')
         except requests.ConnectionError as e:
-            print(f'Ошибка соединения к {host}:{port}')
+            SetStatus(f'Ошибка соединения к {host}:{port}', 'Error')
         except Exception as e:
-            print(e)
+            SetStatus(str(e), 'Error')
 
 #Изменение модели
 def ChangeRowFromDataModel():
@@ -539,22 +595,20 @@ def ChangeRowFromDataModel():
         text = {name: m}
         text = str(text)
         try:
-            resp = requests.put(f"http://{host}:{port}/ChangeModel", data=text)
-            if resp.text == 'Error':
-                print('Неопознанная ошибка. Изменить/Загрузить модель не получилось')
-                return
-            elif resp.text == 'Not Added':
-                print('СОМпорт не запущен')
-            else:
-                print('Успешное изменение конфигурации модели')
+            resp = requests.put(f"http://{host}:{port}/ChangeModel", data=text, timeout=TIMEOUT)
             tree_m.item(last_select_row_m, values=row_val)
             server_models[name] = m
             global server_interface
             server_interface = FillTableInterface()
+            SetStatus('','')
+            if resp.text == 'Error':
+                SetStatus('Неопознанная ошибка. Изменить/Загрузить модель не получилось', 'Error')
+            elif resp.text == 'Not Added':
+                SetStatus('СОМпорт не запущен','Error')
         except requests.ConnectionError as e:
-            print(f'Ошибка соединения к {host}:{port}')
+            SetStatus(f'Ошибка соединения с {host}:{port}', 'Error')
         except Exception as e:
-            print(e)
+            SetStatus(str(e), 'Error')
 
 #Удаление модели
 def DeleteRowModel():
@@ -565,28 +619,40 @@ def DeleteRowModel():
         text[str(tree_m.item(selected_item)['values'][0])] = True
     text = str(text)
     try:
-        resp = requests.delete(f"http://{host}:{port}/Models", data=text)
+        resp = requests.delete(f"http://{host}:{port}/Models", data=text, timeout=TIMEOUT)
         if resp.status_code == 400:
-            print('Странная ошибка при удалении на сервере')
+            SetStatus('Странная ошибка при удалении на сервере', 'Error')
         else:
             ans = eval(resp.text)
             err_text = list()
-            print('Успешное удаление модели')
+            for selected_item in tree_m.selection():
+                key = str(tree_m.item(selected_item)['values'][0])
+                if key in ans:
+                    del server_models[key]
+                    tree_m.delete(selected_item)
+                else:
+                    err_text.append(key)
+            UpdateInterface()
             if len(err_text) != 0:
-                print(f'Весы: {err_text} используют удаленный тип модели')
-
+                SetStatus(f'Модели: {err_text} не были удалены', 'Error')
     except requests.ConnectionError as e:
-        print(f'Ошибка соединения к {host}:{port}')
+        SetStatus(f'Ошибка соединения к {host}:{port}', 'Error')
     except Exception as e:
-        print(e)
-
+        SetStatus(str(e), 'Error')
 #endregion
 
 if __name__ == '__main__':
-    with open("config.json", 'r') as file:
-        _config_params = json.load(file)
+    try:
+        with open("config.json", 'r') as file:
+            _config_params = json.load(file)
+    except:
+        with open("config.json", 'w') as file:
+            _config_params = dict()
+            _config_params['server'] = {'port': '8080', 'host': '192.168.9.156', 'timeout' : 0.2}
+            json.dump(_config_params, file, indent=4)
     host = _config_params['server']['host']
     port = _config_params['server']['port']
+    TIMEOUT = _config_params['server']['timeout']
 
     last_select_row = ''
     last_select_row_m = ''
@@ -604,6 +670,13 @@ if __name__ == '__main__':
     tab_control.add(tabInterface, text='Интерфейсы')
     tab_control.add(tabModel, text='Модели')
     tab_control.pack(expand=1, fill='both')
+
+
+    status_Label = Label(tabInterface, text='Статус: ', anchor='w', font=("Arial", 10))
+    status_Label.grid(row=1, column=0, sticky="nsew", padx=2)
+    status_Label_m = Label(tabModel, text='Статус: ', anchor='w', font=("Arial", 10))
+    status_Label_m.grid(row=1, column=0, sticky="nsew", padx=2)
+
     #Вкладка Интерефейсов
     tabInterface.rowconfigure(index=0, weight=1)
     tabInterface.columnconfigure(index=0, weight=1)
@@ -646,8 +719,6 @@ if __name__ == '__main__':
     btn_update.grid(row=0, column=0, sticky="nsew", padx=5, pady=2)
     btn_reload = Button(button_frame, text="Перезапустить интерфейсы", command=ReloadInterfaces)
     btn_reload.grid(row=1, column=0, sticky="nsew", padx=5, pady=2)
-    btn_models = Button(button_frame, text="Модели")
-    btn_models.grid(row=2, column=0, sticky="nsew", padx=5, pady=2)
     #Поле собственного IP
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
@@ -674,7 +745,7 @@ if __name__ == '__main__':
     IPp_Label.grid(row=3, column=0, sticky="nsew", padx=5, pady=2)
     IPp_entry = Entry(enter_interface_frame, justify=CENTER)
     IPp_entry.grid(row=3, column=1, sticky="nsew", padx=5, pady=2)
-    data_Label = Label(enter_interface_frame, text='Дата(dd.mm.yyyy):', anchor='w' ,font=("Arial", 10))
+    data_Label = Label(enter_interface_frame, text='Дата(dd.mm.yy):', anchor='w' ,font=("Arial", 10), width=14)
     data_Label.grid(row=4, column=0, sticky="nsew", padx=5, pady=2)
     data_entry = Entry(enter_interface_frame, justify=CENTER)
     data_entry.grid(row=4, column=1, sticky="nsew", padx=5, pady=2)
@@ -768,4 +839,5 @@ if __name__ == '__main__':
     button_Change_m.grid(row=0, column=1, sticky="nsew", padx=7, pady=2)
     button_Delete_m = Button(button_frame2_m, text='Удалить модель', width=16, command=DeleteRowModel)
     button_Delete_m.grid(row=0, column=2, sticky="nsew", padx=5, pady=2)
+
     main_window.mainloop()
